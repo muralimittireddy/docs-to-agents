@@ -38,7 +38,7 @@ Day-1 focuses on **ingesting a GitHub repository safely** by:
 
 ---
 
-## What this does (Day 1 scope)
+### What this does (Day 1 scope)
 
 - Downloads any GitHub repository ZIP using `codeload.github.com`
 - Deletes existing ZIP to avoid duplicate/corrupt data
@@ -68,3 +68,42 @@ My project focuses on building a conversational AI agent for GitHub repositories
 Since the content is already well-structured with headings and sections, section-based chunking works best—it preserves context, keeps concepts intact, and avoids unnecessary LLM usage.
 
 This hybrid approach (rules first, AI only when needed) makes the system scalable, reliable, and cost-efficient.
+
+---
+
+## Text, Vector & Hybrid Search - Day 3
+
+
+Day-3 focuses on building robust retrieval mechanisms for a GitHub repository AI assistant by implementing multiple search strategies:
+
+- Keyword-based text search for exact matches
+
+- Vector-based semantic search using embeddings
+
+- Hybrid search combining both approaches for best results
+
+### What this does (Day 3 scope)
+
+- Builds a text index over titles, sections, and filenames
+
+- Generates vector embeddings for each documentation chunk
+
+- Combines keyword and vector results using hybrid retrieval
+
+- Enables accurate retrieval for both learning content and assignments
+
+### Why Hybrid Search
+
+- Repository documentation contains exact technical terms (commands, filenames)
+
+- User queries are often natural language or paraphrased
+
+- Keyword search alone misses intent
+
+- Vector search alone misses precision
+
+Hybrid search ensures:
+
+- High precision for technical queries
+
+- Strong semantic understanding for conceptual questions
