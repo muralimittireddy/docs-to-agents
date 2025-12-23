@@ -10,6 +10,10 @@ import re
 from google import genai
 from dotenv import load_dotenv
 import time
+from minsearch import Index
+from sentence_transformers import SentenceTransformer
+import numpy as np
+from minsearch import VectorSearch
 
 load_dotenv()  # loads .env into environment
 
@@ -214,6 +218,55 @@ def intelligent_chunking(text: str, doc_type: str):
     sections = response.split('---')
     return [s.strip() for s in sections if s.strip()]
 
+def extract_title(section):
+    first_line = section.splitlines()[0]
+    return first_line.lstrip('#').strip()
+
+def detect_content_type(filename):
+    text = filename.lower()
+    if "assignment" in text:
+        return "assignment"
+    return "learning"
+
+def classify_query(query):
+    q = query.lower()
+    if "assignment" in q or "task" in q or "exercise" in q:
+        return "assignment"
+    return "learning"
+
+def build_chunk_text(d):
+    parts = []
+    if "title" in d:
+        parts.append(d["title"])
+    if "section" in d:
+        parts.append(d["section"])
+    if "filename" in d:
+        parts.append(d["filename"].split("/")[-1])
+    return "\n\n".join(parts)
+
+def text_search(query,index):
+    return index.search(query, num_results=5)
+
+def vector_search(query,v_index,embedding_model):
+    q = embedding_model.encode(query)
+    return v_index.search(q, num_results=5)
+
+
+def hybrid_search(query,v_index,embedding_model,index):
+    text_results = text_search(query,index)
+    vector_results = vector_search(query,v_index,embedding_model)
+    
+    # Combine and deduplicate results
+    seen_ids = set()
+    combined_results = []
+
+    for result in text_results + vector_results:
+        if result['filename'] not in seen_ids:
+            seen_ids.add(result['filename'])
+            combined_results.append(result)
+    
+    return combined_results
+
 def main():
     print("Hello from AI AGENTS course!")
 
@@ -257,28 +310,67 @@ def main():
     #     repo_chunks.extend(chunks)
 
     # chunking by paragraphs and sections
+    for doc in EXTRACT_DATA:
+        doc_copy = doc.copy()
+        doc_content = doc_copy.pop('content')
+        sections = split_markdown_by_level(doc_content, level=2)
+        for section in sections:
+            # print('section '+section)
+            section_doc = doc_copy.copy()
+            section_doc["content_type"] = detect_content_type(section_doc["filename"])
+            section_doc["title"] = extract_title(section)
+            section_doc['section'] = section
+            repo_chunks.append(section_doc)
+
+    # Chunking with LLM
     # for doc in EXTRACT_DATA:
     #     doc_copy = doc.copy()
     #     doc_content = doc_copy.pop('content')
-    #     sections = split_markdown_by_level(doc_content, level=2)
+    #     doc_type = detect_doc_type(doc_copy["filename"])
+    #     time.sleep(15)  # due to model rate limiting
+    #     sections = intelligent_chunking(doc_content, doc_type)
     #     for section in sections:
     #         section_doc = doc_copy.copy()
     #         section_doc['section'] = section
     #         repo_chunks.append(section_doc)
-
-    # Chunking with LLM
-    for doc in EXTRACT_DATA:
-        doc_copy = doc.copy()
-        doc_content = doc_copy.pop('content')
-        doc_type = detect_doc_type(doc_copy["filename"])
-        time.sleep(15)  # due to model rate limiting
-        sections = intelligent_chunking(doc_content, doc_type)
-        for section in sections:
-            section_doc = doc_copy.copy()
-            section_doc['section'] = section
-            repo_chunks.append(section_doc)
             
-    print(len(repo_chunks))
+    # print(len(repo_chunks))
+
+    # text search
+    index = Index(
+        text_fields=["title", "section", "filename"],
+        keyword_fields=["content_type"]
+    )
+    
+    index.fit(repo_chunks)
+
+    # user_query = "learn java script"
+    # query_type = classify_query(user_query)
+    # results = index.search(
+    #     user_query
+    # )
+    # print(results)
+
+    # vector search
+    embedding_model = SentenceTransformer("all-mpnet-base-v2")
+    chunk_embeddings = []
+
+    for d in repo_chunks:
+        text = build_chunk_text(d)
+        v = embedding_model.encode(text)
+        chunk_embeddings.append(v)
+
+    chunk_embeddings = np.array(chunk_embeddings)
+
+    v_index =  VectorSearch()
+    v_index.fit(chunk_embeddings,repo_chunks)
+
+    # query = 'what to learn in javascript?'
+    # q = embedding_model.encode(query)
+    # results = v_index.search(q)
+    # print(results)
+    query = 'what assignments are there on js?'
+    hybrid_search(query,v_index,embedding_model,index)
 
 
 
