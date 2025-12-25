@@ -16,7 +16,8 @@ This project uses **uv** for fast and clean dependency management.
 
 ### 3. Add dependencies
 
-    uv add requests python-frontmatter python-dotenv google-genai minsearch  sentence-transformers
+    uv add requests python-frontmatter python-dotenv google-genai minsearch  sentence-transformers pydantic_ai
+
     uv add --dev jupyter
 
 ### 4. Run Jupyter
