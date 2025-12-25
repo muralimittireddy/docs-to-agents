@@ -1,6 +1,22 @@
 # docs-to-agents
 
-This project is part of a **7-day AI Agents crash course**.
+This project is part of a **7-day AI Agents crash course**, where the goal is to build a production-style conversational AI agent that understands and answers questions about any GitHub repository (documentation + assignments).
+
+## Tech Stack
+
+- **Python 3.11+**
+
+- **uv** – fast dependency management
+
+- **Gemini API** – LLM backend
+
+- **Pydantic AI** – agent framework
+
+- **minsearch** – lightweight text search
+
+- **Sentence Transformers** – vector embeddings
+
+- **python-frontmatter** – Markdown parsing
 
 ## Environment Setup
 
@@ -28,83 +44,138 @@ This project uses **uv** for fast and clean dependency management.
 
     GEMINI_API_KEY = your-api-key-here
 
+### 6. Run the project
 
-## GitHub Repository Ingestion – Day 1
+    uv run python main.py
 
-Day-1 focuses on **ingesting a GitHub repository safely** by:
-- Downloading the repository as a ZIP
-- Handling network failures with retries
-- Avoiding memory issues using streaming
-- Parsing Markdown files for downstream AI indexing
 
----
+## Day 1 – GitHub Repository Ingestion
+
+**Goal**: Safely ingest GitHub repositories for downstream AI processing.
 
 ### What this does (Day 1 scope)
 
 - Downloads any GitHub repository ZIP using `codeload.github.com`
-- Deletes existing ZIP to avoid duplicate/corrupt data
-- Streams the download to disk (no large memory usage)
+- Streams downloads to avoid memory issues
 - Retries on transient network failures
+- Deletes partial or duplicate ZIP files
 - Extracts and parses `.md` files using `python-frontmatter`
-- Prepares structured data for future embedding / search steps
+- Produces structured raw documents for chunking
+
+### Why this matters
+
+Reliable ingestion is the foundation of any AI system.
+
+If ingestion fails, everything downstream breaks.
 
 ---
 
-## Chunking Documents - Day 2
+## Day 2 – Document Chunking Strategies
 
-Day-2 focuses on how to break large technical documents into smaller, manageable pieces so they can be effectively used by an AI system.
+**Goal**: Convert large documents into meaningful, AI-friendly chunks.
 
-Experimented with three approaches:
+**Explored three approaches**:
 
 - Simple sliding-window chunking
 - Section-based splitting using document structure
 - AI-powered intelligent chunking
 
-**Key insight**: start simple.
+### Final choice
 
-Most real-world cases don’t need complex or expensive chunking strategies.
+**Section-based chunking**
 
-My project focuses on building a conversational AI agent for GitHub repositories (documentation + assignments).
+### Why
 
-Since the content is already well-structured with headings and sections, section-based chunking works best—it preserves context, keeps concepts intact, and avoids unnecessary LLM usage.
+- Documentation already has strong structure
 
-This hybrid approach (rules first, AI only when needed) makes the system scalable, reliable, and cost-efficient.
+- Preserves semantic context
+
+- Avoids unnecessary LLM usage
+
+- Faster and cheaper than AI-based chunking
+
+**Key insight**: Start with simple, deterministic chunking.
+
+Use AI only when rules are insufficient.
 
 ---
 
-## Text, Vector & Hybrid Search - Day 3
+## Day 3 – Text, Vector & Hybrid Search
 
+**Goal**: Build robust retrieval over documentation and assignments.
 
-Day-3 focuses on building robust retrieval mechanisms for a GitHub repository AI assistant by implementing multiple search strategies:
+### Implemented search strategies
 
-- Keyword-based text search for exact matches
+- **Text search** – exact keyword matching
 
-- Vector-based semantic search using embeddings
+- **Vector search** – semantic understanding via embeddings
 
-- Hybrid search combining both approaches for best results
+- **Hybrid search** – combines both approaches
 
-### What this does (Day 3 scope)
+### Why hybrid search
 
-- Builds a text index over titles, sections, and filenames
+- Documentation uses precise technical terms
 
-- Generates vector embeddings for each documentation chunk
+- User questions are often paraphrased
 
-- Combines keyword and vector results using hybrid retrieval
+- Text search alone lacks semantic understanding
 
-- Enables accurate retrieval for both learning content and assignments
+- Vector search alone lacks precision
 
-### Why Hybrid Search
-
-- Repository documentation contains exact technical terms (commands, filenames)
-
-- User queries are often natural language or paraphrased
-
-- Keyword search alone misses intent
-
-- Vector search alone misses precision
-
-Hybrid search ensures:
+**Hybrid retrieval provides**:
 
 - High precision for technical queries
 
-- Strong semantic understanding for conceptual questions
+- Strong recall for conceptual questions
+
+---
+
+## Day 4 – Agentic AI with Pydantic AI
+
+**Goal**: Turn retrieval into an agentic system that can reason, act, and answer reliably
+
+### What changed
+
+Instead of manually calling search functions, the system now uses an LLM-driven agent that:
+
+1. Interprets the user question
+
+2. Decides when and how to search
+
+3. Calls the appropriate tool (hybrid search)
+
+4. Reads retrieved content
+
+5. Produces a grounded answer
+
+### Key concepts learned
+
+- Tool-calling with LLMs
+
+- Agent-driven decision making
+
+- Dependency injection (agent does not know about indexes)
+
+- Separation of concerns:
+
+    - Ingestion
+
+    - Chunking
+
+    - Retrieval
+
+    - Reasoning
+
+### Why Pydantic AI
+
+- Clean abstraction over tool calling
+
+- Automatic argument validation
+
+- Async-safe agent execution
+
+- Provider-agnostic (OpenAI / Gemini interchangeable)
+
+### Result
+
+A true agentic **RAG system** — not just “retrieve then prompt”.
