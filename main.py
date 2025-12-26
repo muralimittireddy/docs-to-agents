@@ -36,7 +36,7 @@ async def main():
         print("Processing your question...")
         response = await agent.run(user_prompt=question)
         print("\nResponse:\n", response.output)
-        log_record,log_path =log_interaction_to_file(agent, response.messages)
+        log_record,log_path =log_interaction_to_file(agent, response.new_messages())
 
         # ---------- Evaluation ----------
         evaluation = await evaluate_log_record(eval_agent, log_record)
