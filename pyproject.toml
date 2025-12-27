@@ -1,0 +1,16 @@
+[project]
+name = "docs-to-agents"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "google-genai>=1.56.0",
+    "minsearch>=0.0.7",
+    "pydantic-ai>=1.39.0",
+    "python-dotenv>=1.2.1",
+    "python-frontmatter>=1.1.0",
+    "requests>=2.32.5",
+    "sentence-transformers>=5.2.0",
+    "streamlit>=1.52.2",
+]

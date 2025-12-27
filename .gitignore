@@ -3,3 +3,5 @@ repo.zip
 .env
 roughcode.py
 /agent_logs
+__pycache__/
+.venv/

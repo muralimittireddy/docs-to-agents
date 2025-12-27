@@ -5,11 +5,13 @@ from tools import SearchTools
 from agent import build_agent
 from logs import log_interaction_to_file
 from eval import eval_agent, evaluate_log_record
-
+import os
 import asyncio
 
-from dotenv import load_dotenv
-load_dotenv()
+# from dotenv import load_dotenv
+# load_dotenv()
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 async def main():
     print('started')

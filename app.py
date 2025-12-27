@@ -1,6 +1,7 @@
 import asyncio
 import streamlit as st
-from dotenv import load_dotenv
+import os
+# from dotenv import load_dotenv
 
 from ingest import load_raw_documents
 from chunking import chunk_documents
@@ -12,8 +13,8 @@ from logs import log_interaction_to_file
 
 # from pydantic_ai import ModelResponse, TextPart
 
-load_dotenv()
-
+# load_dotenv()
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 # -------------------------------------------------
 # App config
 # -------------------------------------------------

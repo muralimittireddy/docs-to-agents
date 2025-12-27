@@ -120,5 +120,5 @@ def load_raw_documents() -> List[Dict[str, Any]]:
     - download repo
     - extract markdown
     """
-    # download_github_zip(GITHUB_ZIP_URL, ZIP_PATH)
+    download_github_zip(GITHUB_ZIP_URL, ZIP_PATH)
     return extract_markdown_from_zip(ZIP_PATH)

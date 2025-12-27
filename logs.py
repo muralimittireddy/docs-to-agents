@@ -5,8 +5,8 @@ from pathlib import Path
 from datetime import datetime
 
 from pydantic_ai.messages import ModelMessagesTypeAdapter
-from dotenv import load_dotenv
-load_dotenv()
+# from dotenv import load_dotenv
+# load_dotenv()
 
 LOG_DIR = Path(os.getenv('LOGS_DIRECTORY', 'logs'))
 LOG_DIR.mkdir(parents=True,exist_ok=True)
