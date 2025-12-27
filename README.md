@@ -40,9 +40,10 @@ This project uses **uv** for fast and clean dependency management.
 
     uv run jupyter notebook
 
-### 5. Create .env
+### 5. Create .env or export 
 
     GEMINI_API_KEY = your-api-key-here
+    export GEMINI_API_KEY=your-api-key-here
 
 ### 6. Run the project
 
