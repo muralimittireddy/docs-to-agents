@@ -4,8 +4,8 @@ import pandas as pd
 from tqdm.auto import tqdm
 from pathlib import Path
 import asyncio
+import time
 import os
-from agent import build_agent
 from logs import log_interaction_to_file, LOG_DIR
 from eval import eval_agent, evaluate_log_record
 from question_generation import question_generator
@@ -14,11 +14,49 @@ from chunking import chunk_documents
 from indexes import RepoIndexes
 from tools import SearchTools
 from agent import build_agent
-# from dotenv import load_dotenv
+from dotenv import load_dotenv
 
-# load_dotenv()
+load_dotenv()
+
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-LOG_DIR = Path("logs")
+# LOG_DIR = Path("logs")
+MAX_RPM = 4
+LLM_INTERVAL_SECONDS = 60/MAX_RPM  # 4 RPM => 1 call / 15 sec
+
+_llm_lock = asyncio.Lock()
+_last_llm_call_ts = 0.0
+
+async def llm_call(call_fn, max_retries=5):
+    """
+    Global LLM call executor:
+    - Guarantees <= 4 RPM
+    - Handles retries safely
+    """
+    global _last_llm_call_ts
+
+    # ---- Rate limiting (GLOBAL) ----
+    async with _llm_lock:
+        now = time.time()
+        elapsed = now - _last_llm_call_ts
+
+        if elapsed < LLM_INTERVAL_SECONDS:
+            wait_time = LLM_INTERVAL_SECONDS - elapsed
+            print(f"[RateLimit] Sleeping {wait_time:.1f}s")
+            await asyncio.sleep(wait_time)
+
+        _last_llm_call_ts = time.time()
+
+    # ---- Retry logic (outside lock) ----
+    for attempt in range(1, max_retries + 1):
+        try:
+            return await call_fn()
+        except Exception as e:
+            if attempt == max_retries:
+                raise
+            backoff = 2 ** attempt
+            print(f"[Retry {attempt}] backing off {backoff}s")
+            await asyncio.sleep(backoff)
+
 
 def build_repo_agent():
     docs = load_raw_documents()
@@ -28,7 +66,7 @@ def build_repo_agent():
     agent = build_agent(tools)
     return agent
 
-async def generate_questions(num_questions=4):
+async def generate_questions(num_questions=3):
     docs = load_raw_documents()
 
     # Randomly sample FAQ records
@@ -44,16 +82,23 @@ async def generate_questions(num_questions=4):
 
     prompt = json.dumps(prompt_docs)
 
-    result = await question_generator.run(prompt)
+    # result = await question_generator.run(prompt)
+    result = await llm_call(
+        lambda: question_generator.run(prompt)
+    )
     return result.output.questions
 
 async def run_agent_on_questions(agent, questions):
     for q in tqdm(questions, desc="Running agent on questions"):
 
-        async def call_agent():
-            return await agent.run(user_prompt=q)
+        # async def call_agent():
+        #     return await agent.run(user_prompt=q)
 
-        result = await with_retry(call_agent)
+        # result = await with_retry(call_agent)
+
+        result = await llm_call(
+            lambda: agent.run(user_prompt=q)
+        )
 
         log_interaction_to_file(
             agent,
@@ -62,7 +107,7 @@ async def run_agent_on_questions(agent, questions):
         )
 
         # small delay to stay under free-tier QPS
-        await asyncio.sleep(0.5)
+        # await asyncio.sleep(0.5)
 
 def load_ai_generated_logs():
     records = []
@@ -81,13 +126,18 @@ async def evaluate_logs(log_records):
     results = []
 
     for record in tqdm(log_records, desc="Evaluating logs"):
-        async def call_eval():
-            return await evaluate_log_record(eval_agent, record)
+        # async def call_eval():
+        #     return await evaluate_log_record(eval_agent, record)
 
-        eval_result = await with_retry(call_eval)
+        # eval_result = await with_retry(call_eval)
+
+        eval_result = await llm_call(
+            lambda: evaluate_log_record(eval_agent, record)
+        )
+
         results.append((record, eval_result))
         # eval can be slightly faster
-        await asyncio.sleep(0.3)
+        # await asyncio.sleep(0.3)
     return results
 
 def build_eval_dataframe(eval_results):
@@ -109,36 +159,15 @@ def build_eval_dataframe(eval_results):
 
     return pd.DataFrame(rows)
 
-async def with_retry(call_fn, max_retries=5, base_delay=20.0):
-    """
-    Executes an async LLM call with retry + exponential backoff.
-    Designed to handle 429 / rate-limit errors safely.
-    """
-    for attempt in range(1, max_retries + 1):
-        try:
-            return await call_fn()
-        except Exception as e:
-            if attempt == max_retries:
-                raise
-
-            sleep_time = base_delay * (2 ** (attempt - 1))
-            jitter = random.uniform(0, 0.5)
-            wait_time = sleep_time + jitter
-
-            print(
-                f"[Retry {attempt}/{max_retries}] "
-                f"Rate limit or transient error. Sleeping {wait_time:.2f}s"
-            )
-            await asyncio.sleep(wait_time)
-
 
 async def run_offline_eval():
     print("Building agent...")
     agent = build_repo_agent()
 
     print("Generating synthetic questions...")
-    questions = await generate_questions(num_questions=4)
-    print(f"DEBUG: generated {len(questions)} questions")
+    questions = await generate_questions(num_questions=3)
+    # print(f"DEBUG: generated {len(questions)} questions")
+    print(f"Generated {len(questions)} questions")
     print(f"passing {questions[:3]} questions")
 
     print("Running agent on questions...")
