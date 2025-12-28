@@ -1,182 +1,204 @@
-# docs-to-agents
+# 🤖 GitHub Repository AI Assistant
 
-This project is part of a **7-day AI Agents crash course**, where the goal is to build a production-style conversational AI agent that understands and answers questions about any GitHub repository (documentation + assignments).
+An AI-powered assistant that helps users quickly find answers from any GitHub repository’s documentation and assignments.
 
-## Tech Stack
+## Overview
 
-- **Python 3.11+**
+Large GitHub repositories often contain extensive documentation and assignments that are hard to navigate.
 
-- **uv** – fast dependency management
+This project solves that problem by providing a conversational AI assistant that:
 
-- **Gemini API** – LLM backend
+- Searches GitHub repository documentation
 
-- **Pydantic AI** – agent framework
+- Retrieves the most relevant sections
 
-- **minsearch** – lightweight text search
+- Generates clear, grounded answers with references to source files
 
-- **Sentence Transformers** – vector embeddings
+### Why it’s useful
 
-- **python-frontmatter** – Markdown parsing
+- No more scrolling through long Markdown files
 
-## Environment Setup
+- Answers are grounded in real repository content
 
-This project uses **uv** for fast and clean dependency management.
+- Direct references to source files
 
-### 1. Install uv
+- Multiple interfaces:
 
-    pip install uv
+    - CLI
 
-### 2. Initialize project
+    - Web UI (Streamlit)
 
-    uv init
+## Installation
 
-### 3. Add dependencies
+**Requirements**:
 
-    uv add requests python-frontmatter python-dotenv google-genai minsearch  sentence-transformers pydantic_ai streamlit
+- Python 3.9+  
+- [uv](https://github.com/astral-sh/uv) 
 
-    uv add --dev jupyter
+```bash
+# Make sure you have uv
+pip install uv
 
-### 4. Run Jupyter
+# Clone this repo
+git clone https://github.com/muralimittireddy/docs-to-agents.git
+cd docs-to-agents
 
-    uv run jupyter notebook
+# Install dependencies
+uv sync
+```
 
-### 5. Create .env or export 
+## Usage
 
-    GEMINI_API_KEY = your-api-key-here
-    export GEMINI_API_KEY=your-api-key-here
+### API key
 
-### 6. Run the project
+Set up your GEMINI API key:
 
-    uv run python main.py
+```bash
+export GEMINI_API_KEY="your-key"
+```
 
+### CLI mode  
 
-## Day 1 – GitHub Repository Ingestion
+```bash
+uv run main.py
+```
 
-**Goal**: Safely ingest GitHub repositories for downstream AI processing.
+This opens an interactive CLI environment. You can ask the conversational agent any question about the course.
 
-### What this does (Day 1 scope)
+Type `stop` to exit.  
 
-- Downloads any GitHub repository ZIP using `codeload.github.com`
-- Streams downloads to avoid memory issues
-- Retries on transient network failures
-- Deletes partial or duplicate ZIP files
-- Extracts and parses `.md` files using `python-frontmatter`
-- Produces structured raw documents for chunking
+### Web UI mode  
 
-### Why this matters
+```bash
+uv run streamlit run app.py
+```
 
-Reliable ingestion is the foundation of any AI system.
 
-If ingestion fails, everything downstream breaks.
+This launches a Streamlit app. You can chat with the assistant in your browser.  
 
----
+The app is available at [http://localhost:8501](http://localhost:8501).
 
-## Day 2 – Document Chunking Strategies
 
-**Goal**: Convert large documents into meaningful, AI-friendly chunks.
+## Features
 
-**Explored three approaches**:
+- 🔎 Search over Markdown files with `minsearch`  
+- 🤖 AI-generated answers powered by `pydantic-ai` + GEMINI (`gemini-2.5-flash`)  
+- 📂 Direct GitHub references in answers
+- 🖥️ Two interfaces: CLI (`main.py`) and Streamlit (`app.py`)  
+- 📝 Automatic logging of conversations into JSON files (`logs/`)  
 
-- Simple sliding-window chunking
-- Section-based splitting using document structure
-- AI-powered intelligent chunking
 
-### Final choice
+## Evaluations
 
-**Section-based chunking**
+We evaluate the agent using the following criteria:
 
-### Why
+- `instructions_follow`: The agent followed the user's instructions
+- `instructions_avoid`: The agent avoided doing things it was told not to do  
+- `answer_relevant`: The response directly addresses the user's question  
+- `answer_clear`: The answer is clear and correct  
+- `answer_citations`: The response includes proper citations or sources when required  
+- `completeness`: The response is complete and covers all key aspects of the request
+- `tool_call_search`: Is the search tool invoked? 
 
-- Documentation already has strong structure
+We do this in two steps:
 
-- Preserves semantic context
+- First, we generate synthetic questions (see [`question_generation.py`](question_generation.py))
+- Next, we run our agent on the generated questions and check the criteria (see [`offline_eval.py`](offline_eval.py))
 
-- Avoids unnecessary LLM usage
+Current evaluation metrics:
 
-- Faster and cheaper than AI-based chunking
+| Metric | Score |
+|------|------|
+| instructions_follow | **0.888889** |
+| instructions_avoid | **1.000000** |
+| answer_relevant | **0.888889** |
+| answer_clear | **1.000000** |
+| answer_citations | **0.777778** |
+| completeness | **0.666667** |
+| tool_call_search | **0.888889** |
 
-**Key insight**: Start with simple, deterministic chunking.
 
-Use AI only when rules are insufficient.
+The most important metric for this project is `answer_relevant`. This measures whether the system's answer is relevant to the user. It's currently ~90%, meaning almost answers were relevant. 
 
----
+Improvements: Our evaluation is currently based on only 10 questions. We need to collect more data for a more comprehensive evaluation set.
 
-## Day 3 – Text, Vector & Hybrid Search
+## Project file overview
 
-**Goal**: Build robust retrieval over documentation and assignments.
+`main.py`: Entry point for the CLI version of the assistant  
+- Loads and indexes data  
+- Initializes the search agent  
+- Provides an interactive loop where users can type questions and get answers  
+- Logs each interaction to a JSON file
 
-### Implemented search strategies
+`app.py`: Streamlit-based web UI for the assistant  
+- Provides a chat-like interface in the browser  
+- Streams assistant responses in real time  
+- Logs all interactions into JSON files
 
-- **Text search** – exact keyword matching
+`ingest.py`: Handles data ingestion and indexing from the GitHub FAQ repository
+- Downloads the repository ZIP archive  
+- Extracts `.md` and `.mdx` files
 
-- **Vector search** – semantic understanding via embeddings
+`chunking.py`:
+- chunks documents into smaller windows
 
-- **Hybrid search** – combines both approaches
+`indexes.py`:
+- Builds a `minsearch` index for fast text-based and vector based retrieval
 
-### Why hybrid search
+`tools.py`: Defines the search tool used by the agent  
+- Wraps the `minsearch` index into a simple API  
+- Provides a `hybrid_search(query)` tool that retrieves up to 5 results
 
-- Documentation uses precise technical terms
+`agent.py`: Defines and configures the AI Agent  
+- Uses `pydantic-ai` to build the agent  
+- Loads a system prompt template that instructs the assistant on how to answer questions  
+- Attaches the search tool so the agent can query the FAQ index  
+- Configured with the `gemini-2.5-flash` model
 
-- User questions are often paraphrased
+`logs.py`: Utility for logging all interactions  
+- Serializes messages, prompts, and model metadata  
+- Stores logs in JSON files in the `logs/` directory (configurable via `LOGS_DIRECTORY`)  
+- Ensures each log has a timestamp and unique filename
 
-- Text search alone lacks semantic understanding
 
-- Vector search alone lacks precision
+## Tests
 
-**Hybrid retrieval provides**:
+TODO: add tests
 
-- High precision for technical queries
+```bash
+uv run pytest
+```
 
-- Strong recall for conceptual questions
+(Currently minimal test coverage; contributions welcome.)  
 
----
 
-## Day 4 – Agentic AI with Pydantic AI
+## Deployment
 
-**Goal**: Turn retrieval into an agentic system that can reason, act, and answer reliably
+To deploy the app on Streamlit Cloud:
 
-### What changed
+Generate a `requirements.txt` file from your `uv` environment:
 
-Instead of manually calling search functions, the system now uses an LLM-driven agent that:
+```bash
+uv export > requirements.txt
+```
 
-1. Interprets the user question
+Make sure it's pushed along with the latest changes.
 
-2. Decides when and how to search
+Next, run the application locally:
 
-3. Calls the appropriate tool (hybrid search)
+```bash
+uv run streamlit run app.py
+```
 
-4. Reads retrieved content
+Click "deploy", connect your GitHub repo, and configure deployment settings.
 
-5. Produces a grounded answer
+In the settings, make sure you configure `GEMINI_API_KEY`.
 
-### Key concepts learned
+Once configured, Streamlit Cloud will automatically detect changes. It will redeploy your app whenever you push updates.
 
-- Tool-calling with LLMs
 
-- Agent-driven decision making
+## Credits / Acknowledgments
 
-- Dependency injection (agent does not know about indexes)
-
-- Separation of concerns:
-
-    - Ingestion
-
-    - Chunking
-
-    - Retrieval
-
-    - Reasoning
-
-### Why Pydantic AI
-
-- Clean abstraction over tool calling
-
-- Automatic argument validation
-
-- Async-safe agent execution
-
-- Provider-agnostic (OpenAI / Gemini interchangeable)
-
-### Result
-
-A true agentic **RAG system** — not just “retrieve then prompt”.
+- [DataTalksClub](https://github.com/DataTalksClub) for open-source course materials  
+- [Alexey Grigorev](https://www.linkedin.com/in/agrigorev) for the [AI Agents Crash Course](https://alexeygrigorev.com/aihero/)  
+- Main libraries: `pydantic-ai` for AI, `minsearch` for search
