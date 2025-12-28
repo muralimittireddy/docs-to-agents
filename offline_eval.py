@@ -4,6 +4,7 @@ import pandas as pd
 from tqdm.auto import tqdm
 from pathlib import Path
 import asyncio
+import os
 from agent import build_agent
 from logs import log_interaction_to_file, LOG_DIR
 from eval import eval_agent, evaluate_log_record
@@ -13,10 +14,10 @@ from chunking import chunk_documents
 from indexes import RepoIndexes
 from tools import SearchTools
 from agent import build_agent
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 
-load_dotenv()
-
+# load_dotenv()
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 LOG_DIR = Path("logs")
 
 def build_repo_agent():

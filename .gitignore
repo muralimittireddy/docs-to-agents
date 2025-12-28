@@ -6,3 +6,4 @@ roughcode.py
 __pycache__/
 .venv/
 logs/
+.devcontainer
