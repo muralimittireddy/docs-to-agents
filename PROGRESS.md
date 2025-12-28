@@ -179,3 +179,115 @@ Instead of manually calling search functions, the system now uses an LLM-driven 
 ### Result
 
 A true agentic **RAG system** — not just “retrieve then prompt”.
+
+---
+
+## Day 5 – Logging & Automated Evaluation (LLM-as-Judge)
+
+**Goal**: Add observability and objective quality evaluation to the AI agent.
+
+### What this does (Day 5 scope)
+
+- Captures every agent interaction as a structured JSON log
+
+- Logs:
+        
+   - system prompt
+    
+   - user question
+    
+   - tool calls & returns
+    
+   - final answer
+    
+   - model & tool metadata
+
+- Introduces an evaluation agent (LLM-as-judge)
+
+- Evaluates answers using a checklist-based rubric
+
+- Supports synthetic evaluation using generated questions
+
+- Aggregates results into quantitative metrics
+
+### Logging design
+
+Each agent run produces a JSON log file containing:
+
+- Agent name & model
+
+- System instructions
+
+- Tools available
+
+- Full message trace (user → tool → agent)
+
+- Source (user vs ai-generated)
+
+This enables:
+
+- Debugging incorrect answers
+
+- Replaying agent decisions
+
+- Comparing prompt versions
+
+- Offline evaluation without re-running the agent
+
+**Key insight**:
+
+If you can’t log it, you can’t evaluate or improve it.
+
+### Evaluation Results (Day 5)
+
+The agent was evaluated using offline synthetic questions and an LLM-as-judge checklist.
+
+Results are aggregated across multiple runs.
+
+| Metric | Score |
+|------|------|
+| instructions_follow | **0.888889** |
+| instructions_avoid | **1.000000** |
+| answer_relevant | **0.888889** |
+| answer_clear | **1.000000** |
+| answer_citations | **0.777778** |
+| completeness | **0.666667** |
+| tool_call_search | **0.888889** |
+
+**Interpretation**:
+
+- The agent consistently follows safety rules and produces clear answers.
+
+- Retrieval is used in most cases, but not enforced yet.
+
+- Answer completeness and explicit citations are the main improvement areas.
+
+These metrics provide a baseline for future prompt tuning and regression testing.
+
+## Day 6 – Publishing the Agent with Streamlit & Deployment
+
+**Goal**: Make the AI agent accessible through a simple, interactive web interface.
+
+### What this does (Day 6 scope)
+
+#### Created a chat-based UI using Streamlit
+
+- Simple, intuitive interface for asking questions
+
+- Maintains conversation history using session state
+
+- Clean separation between UI and agent logic
+
+#### Deployed the application on Streamlit Community Cloud
+
+- Connected the GitHub repository
+
+- Configured environment variables securely
+
+- Enabled one-click deployment
+
+- App is now accessible via a public URL
+
+**Result**:
+
+The agent is no longer a local experiment — it’s a live, shareable AI application.
